@@ -21,7 +21,7 @@ subnet = {
     subnet_name          = "frontend_remote"
     resource_group_name  = "shri1"
     virtual_network_name = "vnet1"
-    address_prefixes     = ["10.1.1.0/24"]
+    address_prefixes     = ["10.0.1.0/24"]
 
   }
 
