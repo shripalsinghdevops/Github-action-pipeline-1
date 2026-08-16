@@ -1,0 +1,139 @@
+name: Terraform CD
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_WORKING_DIR: parent_module/prod
+  TF_VERSION: "1.13.3"
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+
+jobs:
+
+  # ==================================================
+  # Terraform Plan on Main
+  # ==================================================
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # Azure OIDC Authentication
+      # --------------------------------------------------
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------------------------------
+      # Terraform Setup
+      # --------------------------------------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # --------------------------------------------------
+      # Terraform Init
+      # --------------------------------------------------
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      # --------------------------------------------------
+      # Terraform Validate
+      # --------------------------------------------------
+      - name: Terraform Validate
+        run: terraform validate -no-color
+
+      # --------------------------------------------------
+      # Terraform Plan
+      # --------------------------------------------------
+      - name: Terraform Plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      # --------------------------------------------------
+      # Upload Plan
+      # --------------------------------------------------
+      - name: Upload Terraform Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-main-${{ github.sha }}
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 7
+
+
+  # ==================================================
+  # Terraform Apply
+  # ==================================================
+  terraform-apply:
+    name: Terraform Apply
+    needs: terraform-plan
+
+    runs-on: ubuntu-latest
+
+    # IMPORTANT:
+    # Configure this environment in:
+    # Repository → Settings → Environments → production
+    #
+    # Add required reviewer:
+    # tktusharkumar95-png
+    environment:
+      name: production
+
+    defaults:
+      run:
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+    steps:
+
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # --------------------------------------------------
+      # Azure OIDC Authentication
+      # --------------------------------------------------
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------------------------------
+      # Terraform Setup
+      # --------------------------------------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # --------------------------------------------------
+      # Terraform Init
+      # --------------------------------------------------
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      # --------------------------------------------------
+      # Terraform Apply
+      # --------------------------------------------------
+      - name: Terraform Apply
+        run: terraform apply -input=false -auto-approve
