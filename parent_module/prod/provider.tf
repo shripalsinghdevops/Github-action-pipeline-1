@@ -1,8 +1,8 @@
 terraform {
   backend "azurerm" {
     resource_group_name  = "shri"
-    storage_account_name = "abcd123454321"
-    container_name       = "container"
+    storage_account_name = "shri889965"
+    container_name       = "container1"
     key                  = "pipeline.tfstate"
 
   }
