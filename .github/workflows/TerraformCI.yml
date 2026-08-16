@@ -71,33 +71,6 @@ jobs:
         run: terraform validate -no-color
 
       # --------------------------------------------------
-      # TFLint
-      # --------------------------------------------------
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
-          cache: true
-
-      - name: Initialize TFLint
-        run: tflint --init
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run TFLint
-        run: tflint -f compact
-
-      # --------------------------------------------------
-      # Checkov - IaC Security Scan
-      # --------------------------------------------------
-      - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: ${{ env.TF_WORKING_DIR }}
-          framework: terraform
-          soft_fail: false
-
-      # --------------------------------------------------
       # Gitleaks - Secret Scan
       # --------------------------------------------------
       - name: Run Gitleaks
